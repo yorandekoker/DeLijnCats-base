@@ -1,6 +1,6 @@
 # How many cats fit on one bus?
 
-> **Gebruik van AI:** de Unity-code, de scène-opbouw en het ontwerpdocument heb ik gemaakt met hulp van Claude (AI). De commits met "Co-Authored-By: Claude" komen daaruit voort. Het onderzoek, de keuze van de locatie en het storyboard zijn mijn eigen werk. Ik heb het spel zelf getest.
+> **Gebruik van AI:** de Unity-code, de scène-opbouw en het ontwerpdocument heb ik gemaakt met hulp van Claude (AI). De commits met "Co-Authored-By: Claude" komen daaruit voort. Het onderzoek, de keuze van de locatie en het storyboard zijn mijn eigen werk.
 
 Werkstuk 1, Interaction 1 (Unity). De Lijn x zakenreizigers x museumzaal.
 
