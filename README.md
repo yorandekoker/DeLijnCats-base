@@ -1,5 +1,7 @@
 # How many cats fit on one bus?
 
+> **Gebruik van AI:** de Unity-code, de scène-opbouw en het ontwerpdocument heb ik gemaakt met hulp van Claude (AI). De commits met "Co-Authored-By: Claude" komen daaruit voort. Het onderzoek, de keuze van de locatie en het storyboard zijn mijn eigen werk. Ik heb het spel zelf getest.
+
 Werkstuk 1, Interaction 1 (Unity). De Lijn x zakenreizigers x museumzaal.
 
 Een touchscreen aan de ingang van een museum. Katten stappen in een De Lijn-bus en de CO2-teller per kat daalt:
