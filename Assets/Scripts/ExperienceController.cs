@@ -26,7 +26,7 @@ public partial class ExperienceController : MonoBehaviour
 
     [Header("Game")]
     public float roundSeconds = 30f;
-    public float busSpeed = 6f;
+    public float busSpeed = 8f;
     public float pickupReach = 6f;          // a cat can be tapped until the bus is this far past it
     public float idleSeconds = 25f;         // result screen goes back to attract mode after this
     public float attractCameraSeconds = 6f;

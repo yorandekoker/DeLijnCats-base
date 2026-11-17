@@ -25,7 +25,7 @@ public static class BuildDeLijnScene
     static readonly Color Sky = new Color32(205, 228, 246, 255);
 
     const int PassengerCount = 9;
-    const int SeatCount = 8;
+    const int SeatCount = 9;   // one seat per waiting cat
 
     static readonly Dictionary<string, Material> cache = new Dictionary<string, Material>();
     static bool cinemachineMissing;
@@ -54,7 +54,7 @@ public static class BuildDeLijnScene
         {
             lightObj.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
             var l = lightObj.GetComponent<Light>();
-            if (l != null) { l.intensity = 1.15f; l.shadows = LightShadows.Soft; }
+            if (l != null) { l.intensity = 1.15f; l.shadows = LightShadows.Soft; l.shadowBias = 0.05f; l.shadowNormalBias = 1f; }
         }
 
         BuildWorld();
@@ -111,7 +111,7 @@ public static class BuildDeLijnScene
             Debug.Log("De Lijn: scene built and saved to " + scenePath + ". Press Play.");
     }
 
-    static float StopX(int i) { return 24f + i * 17f; }
+    static float StopX(int i) { return 24f + i * 22f; }
 
     // ---------------------------------------------------------------- world
 
@@ -126,14 +126,14 @@ public static class BuildDeLijnScene
         Prim(PrimitiveType.Cube, "KerbNear", world, new Vector3(100f, 0.06f, -3.4f), new Vector3(420f, 0.12f, 0.25f), White);
         Prim(PrimitiveType.Cube, "KerbFar", world, new Vector3(100f, 0.06f, 3.4f), new Vector3(420f, 0.12f, 0.25f), White);
 
-        for (float x = -30f; x < 220f; x += 6f)
+        for (float x = -30f; x < 290f; x += 6f)
             Prim(PrimitiveType.Cube, "Dash", world, new Vector3(x, 0.06f, 0f), new Vector3(2.6f, 0.02f, 0.2f), White);
 
         // Buildings (soft greys and whites, one yellow one now and then).
         var rng = new System.Random(11);
         var palette = new[] { new Color32(244, 246, 248, 255), new Color32(222, 228, 236, 255), new Color32(200, 210, 224, 255), new Color32(255, 255, 255, 255) };
         float bx = -30f;
-        while (bx < 230f)
+        while (bx < 290f)
         {
             float w = 8f + (float)rng.NextDouble() * 6f;
             float h = 4f + (float)rng.NextDouble() * 7f;
@@ -145,7 +145,7 @@ public static class BuildDeLijnScene
         }
 
         // Trees along the far sidewalk.
-        for (float x = -26f; x < 225f; x += 9f)
+        for (float x = -26f; x < 290f; x += 9f)
         {
             float jitter = (float)rng.NextDouble() * 3f;
             Prim(PrimitiveType.Cylinder, "TreeTrunk", world, new Vector3(x + jitter, 1f, 7.6f), new Vector3(0.35f, 1f, 0.35f), new Color32(120, 90, 60, 255));
@@ -197,7 +197,7 @@ public static class BuildDeLijnScene
         {
             var s = new GameObject("Seat_" + i).transform;
             s.SetParent(t, false);
-            s.localPosition = new Vector3(-3.6f + i * 0.9f, 1.2f, 0f);
+            s.localPosition = new Vector3(-3.2f + i * 0.8f, 1.2f, 0f);
             seats[i] = s;
         }
         var ds = new GameObject("DriverSeat").transform;
@@ -241,7 +241,7 @@ public static class BuildDeLijnScene
         }
 
         // Blue ring on the ground: the "tap me" signifier. It pulses at runtime.
-        var ring = Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.04f, 0f), new Vector3(1.5f, 0.02f, 1.5f), Blue);
+        var ring = Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.1f, 0f), new Vector3(1.5f, 0.02f, 1.5f), Blue);
 
         var anim = model.gameObject.AddComponent<Animator>();
         anim.runtimeAnimatorController = controller;
