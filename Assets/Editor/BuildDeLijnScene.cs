@@ -112,7 +112,17 @@ public static class BuildDeLijnScene
         // This one rides along with the bus, so it keeps the bus in frame when it drives away.
         var camBus = MakeVcam("Cam_Bus", new Vector3(6f, 9.5f, -6.5f), new Vector3(6f, 1.5f, 0f), bus.transform);
 
-        // (Step 2 wires the experience controller here.)
+        // ---- The experience: one object that runs everything ----
+        var catComponents = new Cat[cats.Length];
+        for (int i = 0; i < cats.Length; i++) catComponents[i] = cats[i].GetComponent<Cat>();
+        var experience = new GameObject("Experience").AddComponent<ExperienceController>();
+        experience.camOverview = camOverview;
+        experience.camCat = camCat;
+        experience.camBus = camBus;
+        experience.bus = bus.transform;
+        experience.seats = seats;
+        experience.cats = catComponents;
+        experience.carCloud = cloud;
 
         // ---- Save ----
         const string scenePath = "Assets/Scenes/Museum.unity";
@@ -146,10 +156,14 @@ public static class BuildDeLijnScene
         var tail = Prim(PrimitiveType.Capsule, "Tail", cat.transform, new Vector3(0.0f, 0.65f, 0.65f), new Vector3(0.12f, 0.35f, 0.12f), colour);
         tail.transform.localRotation = Quaternion.Euler(60f, 0f, 0f);
         // Blue ring under the cat = "tap me" signifier. It pulses at runtime.
-        Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.03f, 0f), new Vector3(1.6f, 0.02f, 1.6f), Blue);
+        var ring = Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.03f, 0f), new Vector3(1.6f, 0.02f, 1.6f), Blue);
 
         var anim = cat.AddComponent<Animator>();
         anim.runtimeAnimatorController = controller;
+
+        var catScript = cat.AddComponent<Cat>();
+        catScript.animator = anim;
+        catScript.ring = ring.transform;
 
         // Generous invisible hit area so a finger can hit it easily.
         var sc = cat.AddComponent<SphereCollider>();
