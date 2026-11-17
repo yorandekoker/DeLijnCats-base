@@ -20,16 +20,16 @@ public partial class ExperienceController
 
     partial void InitAudio()
     {
-        ambientSrc = MakeSource("Ambient", ambientGroup, true, 0.25f);
+        ambientSrc = MakeSource("Ambient", ambientGroup, true, 0.6f);
         ambientSrc.clip = ToneBank.RoomTone();
         ambientSrc.Play();
 
-        musicSrc = MakeSource("Music", musicGroup, true, 0.10f);
+        musicSrc = MakeSource("Music", musicGroup, true, 0.25f);
         musicSrc.clip = ToneBank.SoftPad();
         musicSrc.Play();
 
-        sfxSrc = MakeSource("SFX", sfxGroup, false, 0.45f);
-        uiSrc = MakeSource("UI", uiGroup, false, 0.35f);
+        sfxSrc = MakeSource("SFX", sfxGroup, false, 0.9f);
+        uiSrc = MakeSource("UI", uiGroup, false, 0.7f);
 
         boardClip = ToneBank.Sweep(520f, 880f, 0.18f);   // soft "pop"
         goClip = ToneBank.Sweep(220f, 150f, 0.9f);       // low motor hum
