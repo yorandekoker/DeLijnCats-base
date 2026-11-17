@@ -9,8 +9,8 @@ using UnityEngine;
 
 /// <summary>
 /// Menu: Tools > De Lijn > Build Scene
-/// Builds the whole museum-entrance scene in one click: floor, two zones (car / bus) in De Lijn colours,
-/// a car, an open bus with 5 seats, 5 cats (with Animator), and three Cinemachine cameras.
+/// Builds the whole world in one click: a long straight road with bus stops, buildings and trees,
+/// a yellow De Lijn bus with seats, a driver cat, nine waiting cats, three Cinemachine cameras and the game object.
 /// Run it again at any time to rebuild the scene from scratch.
 /// </summary>
 public static class BuildDeLijnScene
@@ -22,6 +22,10 @@ public static class BuildDeLijnScene
     static readonly Color Light = new Color32(204, 204, 204, 255);
     static readonly Color White = new Color32(255, 255, 255, 255);
     static readonly Color Black = new Color32(34, 34, 34, 255);
+    static readonly Color Sky = new Color32(205, 228, 246, 255);
+
+    const int PassengerCount = 9;
+    const int SeatCount = 8;
 
     static readonly Dictionary<string, Material> cache = new Dictionary<string, Material>();
     static bool cinemachineMissing;
@@ -36,93 +40,61 @@ public static class BuildDeLijnScene
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // ---- Main camera (Cinemachine Brain drives it) ----
+        // ---- Camera and light ----
         var mainCam = Camera.main;
         mainCam.clearFlags = CameraClearFlags.SolidColor;
-        mainCam.backgroundColor = Light;
+        mainCam.backgroundColor = Sky;
+        mainCam.farClipPlane = 400f;
         var brainType = FindType("Unity.Cinemachine.CinemachineBrain", "Cinemachine.CinemachineBrain");
         if (brainType != null) { if (mainCam.GetComponent(brainType) == null) mainCam.gameObject.AddComponent(brainType); }
         else cinemachineMissing = true;
 
-        // ---- Hall: floor, zones, back wall ----
-        Prim(PrimitiveType.Plane, "Floor", null, Vector3.zero, new Vector3(3f, 1f, 2f), White);
-        Prim(PrimitiveType.Cube, "Zone_Car", null, new Vector3(-6f, 0.02f, 0f), new Vector3(12f, 0.04f, 10f), Light);
-        Prim(PrimitiveType.Cube, "Zone_Bus", null, new Vector3(6f, 0.02f, 0f), new Vector3(12f, 0.04f, 10f), Yellow);
-        Prim(PrimitiveType.Cube, "BackWall", null, new Vector3(0f, 3f, 7f), new Vector3(30f, 6f, 0.2f), White);
-        Prim(PrimitiveType.Cube, "WallStripe", null, new Vector3(0f, 0.6f, 6.85f), new Vector3(30f, 0.3f, 0.1f), Blue);
-
-        // ---- Car (left zone) ----
-        var car = new GameObject("Car");
-        car.transform.position = new Vector3(-6f, 0f, 0f);
-        Prim(PrimitiveType.Cube, "CarBody", car.transform, new Vector3(0f, 0.7f, 0f), new Vector3(4f, 0.9f, 2f), Dark);
-        Prim(PrimitiveType.Cube, "Windshield", car.transform, new Vector3(0.9f, 1.45f, 0f), new Vector3(0.1f, 0.7f, 1.8f), Mid);
-        foreach (var x in new[] { -1.3f, 1.3f })
-            foreach (var z in new[] { -1.05f, 1.05f })
-            {
-                var w = Prim(PrimitiveType.Cylinder, "Wheel", car.transform, new Vector3(x, 0.35f, z), new Vector3(0.7f, 0.12f, 0.7f), Black);
-                w.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            }
-        var cloud = Prim(PrimitiveType.Sphere, "CarCloud", null, new Vector3(-6f, 3.9f, 0f), new Vector3(2.8f, 1.5f, 1.5f), Mid);
-
-        // ---- Bus (right zone): open sides so you can see the cats ----
-        var bus = new GameObject("Bus");
-        bus.transform.position = new Vector3(6f, 0f, 0f);
-        Prim(PrimitiveType.Cube, "BusBase", bus.transform, new Vector3(0f, 0.75f, 0f), new Vector3(9f, 0.9f, 2.4f), Blue);
-        Prim(PrimitiveType.Cube, "BusStripe", bus.transform, new Vector3(0f, 0.95f, 0f), new Vector3(9.02f, 0.25f, 2.42f), Yellow);
-        Prim(PrimitiveType.Cube, "BusRoof", bus.transform, new Vector3(0f, 3.3f, 0f), new Vector3(9.2f, 0.2f, 2.6f), Blue);
-        foreach (var px in new[] { -4.4f, 0f, 4.4f })
+        var lightObj = GameObject.Find("Directional Light");
+        if (lightObj != null)
         {
-            Prim(PrimitiveType.Cube, "Pillar", bus.transform, new Vector3(px, 2.25f, 1.15f), new Vector3(0.15f, 2.1f, 0.15f), Blue);
-            if (Mathf.Abs(px) > 1f)
-                Prim(PrimitiveType.Cube, "Pillar", bus.transform, new Vector3(px, 2.25f, -1.15f), new Vector3(0.15f, 2.1f, 0.15f), Blue);
+            lightObj.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
+            var l = lightObj.GetComponent<Light>();
+            if (l != null) { l.intensity = 1.15f; l.shadows = LightShadows.Soft; }
         }
-        foreach (var x in new[] { -3f, 3f })
-            foreach (var z in new[] { -1.25f, 1.25f })
-            {
-                var w = Prim(PrimitiveType.Cylinder, "Wheel", bus.transform, new Vector3(x, 0.45f, z), new Vector3(0.9f, 0.2f, 0.9f), Black);
-                w.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            }
-        var seats = new Transform[5];
-        for (int i = 0; i < seats.Length; i++)
-        {
-            var s = new GameObject("Seat_" + i).transform;
-            s.SetParent(bus.transform, false);
-            s.localPosition = new Vector3(-3.2f + i * 1.6f, 1.2f, 0f);
-            seats[i] = s;
-        }
+
+        BuildWorld();
+
+        // ---- Bus ----
+        var bus = BuildBus(out var driverSeat, out var seats);
 
         // ---- Cats ----
         var controller = BuildCatAnimator();
-        var catColours = new[] { White, White, Light, Dark, White };
-        var catPositions = new[]
+        var driverCat = BuildCat("Driver", new Vector3(7.5f, 0f, -4.4f), new Color32(255, 255, 255, 255), true, controller);
+        var cols = new[]
         {
-            new Vector3(-6.4f, 1.15f, 0f),   // the lone cat in the car
-            new Vector3(2.5f, 0f, -3.2f),
-            new Vector3(4.5f, 0f, -3.2f),
-            new Vector3(6.5f, 0f, -3.2f),
-            new Vector3(8.5f, 0f, -3.2f),
+            new Color32(232, 162, 74, 255), new Color32(255, 255, 255, 255), new Color32(70, 70, 70, 255),
+            new Color32(204, 204, 204, 255), new Color32(232, 162, 74, 255), new Color32(245, 232, 210, 255),
+            new Color32(70, 70, 70, 255), new Color32(255, 255, 255, 255), new Color32(232, 162, 74, 255),
         };
-        var cats = new GameObject[5];
-        for (int i = 0; i < cats.Length; i++)
-            cats[i] = BuildCat(i, catPositions[i], catColours[i], controller);
+        var passengers = new Cat[PassengerCount];
+        for (int i = 0; i < PassengerCount; i++)
+        {
+            float x = StopX(i);
+            float z = (i % 2 == 0) ? -4.5f : -3.9f;
+            passengers[i] = BuildCat("Cat_" + (i + 1), new Vector3(x, 0f, z), cols[i % cols.Length], false, controller).GetComponent<Cat>();
+        }
 
         // ---- Three Cinemachine cameras ----
-        var camOverview = MakeVcam("Cam_Overview", new Vector3(0f, 7.5f, -19f), new Vector3(0f, 1.5f, 0f), null);
-        var camCat = MakeVcam("Cam_Cat", new Vector3(-6.4f, 3.2f, -6.5f), new Vector3(-6.4f, 1.8f, 0f), null);
-        // This one rides along with the bus, so it keeps the bus in frame when it drives away.
-        var camBus = MakeVcam("Cam_Bus", new Vector3(6f, 9.5f, -6.5f), new Vector3(6f, 1.5f, 0f), bus.transform);
+        var camOverview = MakeVcam("Cam_Overview", new Vector3(11f, 6.5f, -21f), new Vector3(11f, 1.8f, 0f), null);
+        var camDriver = MakeVcam("Cam_Driver", new Vector3(7.5f, 2.4f, -9f), new Vector3(7.5f, 1.4f, 0f), null);
+        // This one rides along with the bus, so the road scrolls past and the cats come into view.
+        var camFollow = MakeVcam("Cam_Follow", new Vector3(8.5f, 3.9f, -16.5f), new Vector3(4.5f, 1.6f, 0f), bus.transform);
 
-        // ---- The experience: one object that runs everything ----
-        var catComponents = new Cat[cats.Length];
-        for (int i = 0; i < cats.Length; i++) catComponents[i] = cats[i].GetComponent<Cat>();
-        var experience = new GameObject("Experience").AddComponent<ExperienceController>();
-        experience.camOverview = camOverview;
-        experience.camCat = camCat;
-        experience.camBus = camBus;
-        experience.bus = bus.transform;
-        experience.seats = seats;
-        experience.cats = catComponents;
-        experience.carCloud = cloud;
+        // ---- The game ----
+        var exp = new GameObject("Experience").AddComponent<ExperienceController>();
+        exp.camOverview = camOverview;
+        exp.camDriver = camDriver;
+        exp.camFollow = camFollow;
+        exp.bus = bus.transform;
+        exp.driver = driverCat.GetComponent<Cat>();
+        exp.driverSeat = driverSeat;
+        exp.seats = seats;
+        exp.passengers = passengers;
 
         // ---- Save ----
         const string scenePath = "Assets/Scenes/Museum.unity";
@@ -139,36 +111,149 @@ public static class BuildDeLijnScene
             Debug.Log("De Lijn: scene built and saved to " + scenePath + ". Press Play.");
     }
 
-    // ---------------------------------------------------------------- helpers
+    static float StopX(int i) { return 24f + i * 17f; }
 
-    static GameObject BuildCat(int index, Vector3 position, Color colour, RuntimeAnimatorController controller)
+    // ---------------------------------------------------------------- world
+
+    static void BuildWorld()
     {
-        var cat = new GameObject("Cat_" + index);
-        cat.transform.position = position;
-        Prim(PrimitiveType.Sphere, "Body", cat.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.9f, 0.8f, 1.1f), colour);
-        Prim(PrimitiveType.Sphere, "Head", cat.transform, new Vector3(0f, 0.95f, -0.3f), new Vector3(0.6f, 0.55f, 0.55f), colour);
-        var earL = Prim(PrimitiveType.Cube, "EarL", cat.transform, new Vector3(-0.2f, 1.3f, -0.3f), new Vector3(0.18f, 0.22f, 0.08f), colour);
-        earL.transform.localRotation = Quaternion.Euler(0f, 0f, 15f);
-        var earR = Prim(PrimitiveType.Cube, "EarR", cat.transform, new Vector3(0.2f, 1.3f, -0.3f), new Vector3(0.18f, 0.22f, 0.08f), colour);
-        earR.transform.localRotation = Quaternion.Euler(0f, 0f, -15f);
-        Prim(PrimitiveType.Sphere, "EyeL", cat.transform, new Vector3(-0.12f, 1.0f, -0.55f), new Vector3(0.09f, 0.09f, 0.09f), Black);
-        Prim(PrimitiveType.Sphere, "EyeR", cat.transform, new Vector3(0.12f, 1.0f, -0.55f), new Vector3(0.09f, 0.09f, 0.09f), Black);
-        var tail = Prim(PrimitiveType.Capsule, "Tail", cat.transform, new Vector3(0.0f, 0.65f, 0.65f), new Vector3(0.12f, 0.35f, 0.12f), colour);
-        tail.transform.localRotation = Quaternion.Euler(60f, 0f, 0f);
-        // Blue ring under the cat = "tap me" signifier. It pulses at runtime.
-        var ring = Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.03f, 0f), new Vector3(1.6f, 0.02f, 1.6f), Blue);
+        var world = new GameObject("World").transform;
 
-        var anim = cat.AddComponent<Animator>();
+        Prim(PrimitiveType.Cube, "Ground", world, new Vector3(100f, -0.1f, 0f), new Vector3(420f, 0.2f, 80f), new Color32(236, 238, 232, 255));
+        Prim(PrimitiveType.Cube, "Road", world, new Vector3(100f, 0.02f, 0f), new Vector3(420f, 0.06f, 6.4f), Dark);
+        Prim(PrimitiveType.Cube, "SidewalkNear", world, new Vector3(100f, 0.03f, -5.4f), new Vector3(420f, 0.06f, 3.6f), Light);
+        Prim(PrimitiveType.Cube, "SidewalkFar", world, new Vector3(100f, 0.03f, 5.4f), new Vector3(420f, 0.06f, 3.6f), Light);
+        Prim(PrimitiveType.Cube, "KerbNear", world, new Vector3(100f, 0.06f, -3.4f), new Vector3(420f, 0.12f, 0.25f), White);
+        Prim(PrimitiveType.Cube, "KerbFar", world, new Vector3(100f, 0.06f, 3.4f), new Vector3(420f, 0.12f, 0.25f), White);
+
+        for (float x = -30f; x < 220f; x += 6f)
+            Prim(PrimitiveType.Cube, "Dash", world, new Vector3(x, 0.06f, 0f), new Vector3(2.6f, 0.02f, 0.2f), White);
+
+        // Buildings (soft greys and whites, one yellow one now and then).
+        var rng = new System.Random(11);
+        var palette = new[] { new Color32(244, 246, 248, 255), new Color32(222, 228, 236, 255), new Color32(200, 210, 224, 255), new Color32(255, 255, 255, 255) };
+        float bx = -30f;
+        while (bx < 230f)
+        {
+            float w = 8f + (float)rng.NextDouble() * 6f;
+            float h = 4f + (float)rng.NextDouble() * 7f;
+            Color c = rng.Next(0, 9) == 0 ? (Color)Yellow : (Color)palette[rng.Next(0, palette.Length)];
+            Prim(PrimitiveType.Cube, "Building", world, new Vector3(bx + w / 2f, h / 2f, 15f), new Vector3(w, h, 8f), c);
+            // a blue roof edge for a bit of De Lijn colour
+            Prim(PrimitiveType.Cube, "RoofEdge", world, new Vector3(bx + w / 2f, h + 0.1f, 15f), new Vector3(w + 0.2f, 0.2f, 8.2f), Blue);
+            bx += w + 1.2f;
+        }
+
+        // Trees along the far sidewalk.
+        for (float x = -26f; x < 225f; x += 9f)
+        {
+            float jitter = (float)rng.NextDouble() * 3f;
+            Prim(PrimitiveType.Cylinder, "TreeTrunk", world, new Vector3(x + jitter, 1f, 7.6f), new Vector3(0.35f, 1f, 0.35f), new Color32(120, 90, 60, 255));
+            Prim(PrimitiveType.Sphere, "TreeCrown", world, new Vector3(x + jitter, 3.0f, 7.6f), new Vector3(2.8f, 2.8f, 2.8f), (rng.Next(0, 2) == 0) ? new Color32(127, 176, 105, 255) : new Color32(156, 203, 134, 255));
+        }
+
+        // Bus stops: a pole with a yellow sign and a blue square, behind each waiting cat.
+        for (int i = 0; i < PassengerCount; i++)
+        {
+            float x = StopX(i) + 1.4f;
+            Prim(PrimitiveType.Cylinder, "StopPole", world, new Vector3(x, 1.3f, -6.2f), new Vector3(0.12f, 1.3f, 0.12f), Dark);
+            Prim(PrimitiveType.Cube, "StopSign", world, new Vector3(x, 2.9f, -6.2f), new Vector3(0.9f, 0.9f, 0.08f), Yellow);
+            Prim(PrimitiveType.Cube, "StopSignBlue", world, new Vector3(x, 2.9f, -6.25f), new Vector3(0.45f, 0.45f, 0.06f), Blue);
+        }
+        // A stop at the start too, where the driver waits.
+        Prim(PrimitiveType.Cylinder, "StopPole", world, new Vector3(9.2f, 1.3f, -6.2f), new Vector3(0.12f, 1.3f, 0.12f), Dark);
+        Prim(PrimitiveType.Cube, "StopSign", world, new Vector3(9.2f, 2.9f, -6.2f), new Vector3(0.9f, 0.9f, 0.08f), Yellow);
+        Prim(PrimitiveType.Cube, "StopSignBlue", world, new Vector3(9.2f, 2.9f, -6.25f), new Vector3(0.45f, 0.45f, 0.06f), Blue);
+    }
+
+    // ---------------------------------------------------------------- bus
+
+    static GameObject BuildBus(out Transform driverSeat, out Transform[] seats)
+    {
+        var bus = new GameObject("Bus");
+        var t = bus.transform;
+        Prim(PrimitiveType.Cube, "BusBase", t, new Vector3(0f, 0.75f, 0f), new Vector3(9f, 0.9f, 2.4f), Yellow);
+        Prim(PrimitiveType.Cube, "BusStripe", t, new Vector3(0f, 0.55f, 0f), new Vector3(9.02f, 0.18f, 2.42f), Blue);
+        Prim(PrimitiveType.Cube, "BusRoof", t, new Vector3(0f, 3.3f, 0f), new Vector3(9.3f, 0.22f, 2.6f), Yellow);
+        Prim(PrimitiveType.Cube, "BusRoofEdge", t, new Vector3(0f, 3.15f, 0f), new Vector3(9.32f, 0.08f, 2.62f), Blue);
+        Prim(PrimitiveType.Cube, "Windscreen", t, new Vector3(4.5f, 2.3f, 0f), new Vector3(0.12f, 1.9f, 2.3f), new Color32(190, 215, 240, 255));
+        Prim(PrimitiveType.Cube, "RearPanel", t, new Vector3(-4.5f, 2.3f, 0f), new Vector3(0.12f, 1.9f, 2.3f), Yellow);
+        Prim(PrimitiveType.Cube, "Destination", t, new Vector3(4.56f, 3.0f, 0f), new Vector3(0.06f, 0.3f, 1.5f), Black);
+        foreach (var z in new[] { -0.8f, 0.8f })
+            Prim(PrimitiveType.Sphere, "Headlight", t, new Vector3(4.55f, 0.85f, z), new Vector3(0.3f, 0.3f, 0.3f), White);
+        foreach (var px in new[] { -4.4f, -1.5f, 1.5f, 4.4f })
+            Prim(PrimitiveType.Cube, "PillarBack", t, new Vector3(px, 2.25f, 1.15f), new Vector3(0.15f, 2.1f, 0.15f), Blue);
+        foreach (var px in new[] { -4.4f, 4.4f })
+            Prim(PrimitiveType.Cube, "PillarFront", t, new Vector3(px, 2.25f, -1.15f), new Vector3(0.15f, 2.1f, 0.15f), Blue);
+        foreach (var x in new[] { -3f, 3f })
+            foreach (var z in new[] { -1.25f, 1.25f })
+            {
+                var w = Prim(PrimitiveType.Cylinder, "Wheel", t, new Vector3(x, 0.5f, z), new Vector3(1f, 0.2f, 1f), Black);
+                w.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
+        // Seats, a driver seat at the front, with a little seat block under each.
+        seats = new Transform[SeatCount];
+        for (int i = 0; i < SeatCount; i++)
+        {
+            var s = new GameObject("Seat_" + i).transform;
+            s.SetParent(t, false);
+            s.localPosition = new Vector3(-3.6f + i * 0.9f, 1.2f, 0f);
+            seats[i] = s;
+        }
+        var ds = new GameObject("DriverSeat").transform;
+        ds.SetParent(t, false);
+        ds.localPosition = new Vector3(3.7f, 1.2f, 0.2f);
+        driverSeat = ds;
+        return bus;
+    }
+
+    // ---------------------------------------------------------------- cats
+
+    static GameObject BuildCat(string name, Vector3 position, Color colour, bool isDriver, RuntimeAnimatorController controller)
+    {
+        var cat = new GameObject(name);
+        cat.transform.position = position;
+
+        // The Animator moves the "Model" child up and down; the root is moved by the game.
+        var model = new GameObject("Model").transform;
+        model.SetParent(cat.transform, false);
+        model.localScale = Vector3.one * 0.85f;
+
+        Prim(PrimitiveType.Sphere, "Body", model, new Vector3(0f, 0.45f, 0f), new Vector3(0.9f, 0.8f, 1.0f), colour);
+        Prim(PrimitiveType.Sphere, "Head", model, new Vector3(0f, 1.0f, -0.25f), new Vector3(0.75f, 0.65f, 0.65f), colour);
+        var earL = Prim(PrimitiveType.Cube, "EarL", model, new Vector3(-0.24f, 1.38f, -0.25f), new Vector3(0.24f, 0.24f, 0.1f), colour);
+        earL.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        var earR = Prim(PrimitiveType.Cube, "EarR", model, new Vector3(0.24f, 1.38f, -0.25f), new Vector3(0.24f, 0.24f, 0.1f), colour);
+        earR.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+        Prim(PrimitiveType.Sphere, "EyeL", model, new Vector3(-0.16f, 1.05f, -0.55f), new Vector3(0.11f, 0.13f, 0.08f), Black);
+        Prim(PrimitiveType.Sphere, "EyeR", model, new Vector3(0.16f, 1.05f, -0.55f), new Vector3(0.11f, 0.13f, 0.08f), Black);
+        Prim(PrimitiveType.Sphere, "Nose", model, new Vector3(0f, 0.93f, -0.58f), new Vector3(0.08f, 0.06f, 0.06f), new Color32(236, 130, 150, 255));
+        var tail = Prim(PrimitiveType.Capsule, "Tail", model, new Vector3(0.3f, 0.6f, 0.55f), new Vector3(0.14f, 0.4f, 0.14f), colour);
+        tail.transform.localRotation = Quaternion.Euler(50f, 0f, -25f);
+
+        if (isDriver)
+        {
+            // Yellow cap and a blue scarf.
+            Prim(PrimitiveType.Cylinder, "Cap", model, new Vector3(0f, 1.34f, -0.25f), new Vector3(0.62f, 0.07f, 0.62f), Yellow);
+            Prim(PrimitiveType.Sphere, "CapTop", model, new Vector3(0f, 1.36f, -0.25f), new Vector3(0.58f, 0.34f, 0.58f), Yellow);
+            Prim(PrimitiveType.Cube, "CapBrim", model, new Vector3(0f, 1.3f, -0.62f), new Vector3(0.5f, 0.04f, 0.3f), Blue);
+            Prim(PrimitiveType.Sphere, "Scarf", model, new Vector3(0f, 0.72f, -0.2f), new Vector3(0.72f, 0.22f, 0.72f), Blue);
+        }
+
+        // Blue ring on the ground: the "tap me" signifier. It pulses at runtime.
+        var ring = Prim(PrimitiveType.Cylinder, "Ring", cat.transform, new Vector3(0f, 0.04f, 0f), new Vector3(1.5f, 0.02f, 1.5f), Blue);
+
+        var anim = model.gameObject.AddComponent<Animator>();
         anim.runtimeAnimatorController = controller;
 
-        var catScript = cat.AddComponent<Cat>();
-        catScript.animator = anim;
-        catScript.ring = ring.transform;
+        var script = cat.AddComponent<Cat>();
+        script.animator = anim;
+        script.ring = ring.transform;
 
         // Generous invisible hit area so a finger can hit it easily.
         var sc = cat.AddComponent<SphereCollider>();
-        sc.radius = 0.9f;
-        sc.center = new Vector3(0f, 0.5f, 0f);
+        sc.radius = 1.1f;
+        sc.center = new Vector3(0f, 0.7f, 0f);
         return cat;
     }
 
@@ -176,18 +261,21 @@ public static class BuildDeLijnScene
     {
         const string path = "Assets/Generated/CatAnimator.controller";
         AssetDatabase.DeleteAsset(path);
+        AssetDatabase.DeleteAsset("Assets/Generated/Cat_Idle.anim");
+        AssetDatabase.DeleteAsset("Assets/Generated/Cat_Hop.anim");
+
+        var binding = EditorCurveBinding.FloatCurve("", typeof(Transform), "localPosition.y");
 
         var idle = new AnimationClip { name = "Cat_Idle" };
-        var idleBinding = EditorCurveBinding.FloatCurve("", typeof(Transform), "localScale.y");
-        AnimationUtility.SetEditorCurve(idle, idleBinding,
-            new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 1.05f), new Keyframe(2f, 1f)));
+        AnimationUtility.SetEditorCurve(idle, binding,
+            new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0.04f), new Keyframe(2f, 0f)));
         var settings = AnimationUtility.GetAnimationClipSettings(idle);
         settings.loopTime = true;
         AnimationUtility.SetAnimationClipSettings(idle, settings);
 
         var hop = new AnimationClip { name = "Cat_Hop" };
-        AnimationUtility.SetEditorCurve(hop, idleBinding,
-            new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.15f, 0.75f), new Keyframe(0.3f, 1.2f), new Keyframe(0.5f, 1f)));
+        AnimationUtility.SetEditorCurve(hop, binding,
+            new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.2f, 0.5f), new Keyframe(0.45f, 0f)));
 
         AssetDatabase.CreateAsset(idle, "Assets/Generated/Cat_Idle.anim");
         AssetDatabase.CreateAsset(hop, "Assets/Generated/Cat_Hop.anim");
@@ -214,6 +302,8 @@ public static class BuildDeLijnScene
         EditorUtility.SetDirty(ctrl);
         return ctrl;
     }
+
+    // ---------------------------------------------------------------- helpers
 
     static GameObject MakeVcam(string name, Vector3 position, Vector3 lookAt, Transform parent)
     {
@@ -263,8 +353,11 @@ public static class BuildDeLijnScene
             m = new Material(PickShader());
             AssetDatabase.CreateAsset(m, path);
         }
+        m.shader = PickShader();
         m.color = colour;
         if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", colour);
+        if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.15f);
+        if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
         EditorUtility.SetDirty(m);
         cache[key] = m;
         return m;
@@ -272,10 +365,10 @@ public static class BuildDeLijnScene
 
     static Shader PickShader()
     {
-        // Flat, unlit colours give a clean, professional look that matches the De Lijn palette exactly.
-        var s = Shader.Find("Universal Render Pipeline/Unlit");
-        if (s == null) s = Shader.Find("Unlit/Color");
+        // Lit shading gives the shapes some depth; De Lijn colours stay recognisable.
+        var s = Shader.Find("Universal Render Pipeline/Lit");
         if (s == null) s = Shader.Find("Standard");
+        if (s == null) s = Shader.Find("Universal Render Pipeline/Unlit");
         return s;
     }
 
