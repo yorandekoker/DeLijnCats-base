@@ -49,3 +49,12 @@ Gaat er iets mis? Kijk in het Console-venster. Staat er een rode fout, stuur die
 4. Go, vertrek, vergelijking, einde
 5. Geluid
 6. README en checklist
+
+
+## Gameplay (v2)
+1. Attract mode: the camera swings between the road and the driver cat, the hint pulses.
+2. Tap the driver cat (cap + scarf): he hops into the bus and it drives off.
+3. The bus drives straight on for 30 seconds. Tap the waiting cats you pass to let them board; cats you miss stay behind.
+4. More cats on the bus = lower CO2 per cat (100% / number of cats). After 30 s a result screen appears; tap "Play again" or wait 25 s.
+
+Run: open the project, menu Tools > De Lijn > Build Scene, press Play.
