@@ -20,8 +20,9 @@ public partial class ExperienceController
 
     partial void InitAudio()
     {
-        ambientSrc = MakeSource("Ambient", ambientGroup, true, 0.6f);
-        ambientSrc.clip = ToneBank.RoomTone();
+        // Ambient group = the engine: a quiet low rumble that only plays while the bus drives.
+        ambientSrc = MakeSource("Ambient", ambientGroup, true, 0f);
+        ambientSrc.clip = ToneBank.Engine();
         ambientSrc.Play();
 
         musicSrc = MakeSource("Music", musicGroup, true, 0.25f);
@@ -34,6 +35,15 @@ public partial class ExperienceController
         boardClip = ToneBank.Sweep(520f, 880f, 0.18f);   // soft "pop"
         goClip = ToneBank.Sweep(220f, 150f, 0.9f);       // low motor hum
         uiClip = ToneBank.Sweep(880f, 880f, 0.08f);      // short tick
+    }
+
+    partial void TickAudio()
+    {
+        if (ambientSrc == null) return;
+        float moving = Mathf.Clamp01(speed / Mathf.Max(0.01f, busSpeed));
+        float target = state == State.Driving || state == State.Ending ? 0.15f + 0.3f * moving : 0f;
+        ambientSrc.volume = Mathf.MoveTowards(ambientSrc.volume, target, 0.8f * Time.deltaTime);
+        ambientSrc.pitch = 0.8f + 0.5f * moving;
     }
 
     partial void PlaySfx(string sfxName)
@@ -100,20 +110,19 @@ public static class ToneBank
         return clip;
     }
 
-    // Quiet low-passed noise, a bit like the murmur and echo of a big hall.
-    public static AudioClip RoomTone()
+    // 2 seconds, whole number of cycles for every part so it loops without a click: a low diesel-like rumble.
+    public static AudioClip Engine()
     {
-        int n = Rate * 4;
+        int n = Rate * 2;
         var data = new float[n];
-        var rng = new System.Random(7);
-        float lp = 0f;
         for (int i = 0; i < n; i++)
         {
-            float white = (float)(rng.NextDouble() * 2.0 - 1.0);
-            lp += 0.03f * (white - lp);
-            data[i] = lp * 0.6f;
+            float t = i / (float)Rate;
+            float tone = Mathf.Sin(2f * Mathf.PI * 40f * t) + 0.6f * Mathf.Sin(2f * Mathf.PI * 80f * t) + 0.3f * Mathf.Sin(2f * Mathf.PI * 120f * t);
+            float rumble = 0.7f + 0.3f * Mathf.Sin(2f * Mathf.PI * 10f * t);   // idle shudder
+            data[i] = tone / 1.9f * rumble * 0.6f;
         }
-        var clip = AudioClip.Create("room", n, 1, Rate, false);
+        var clip = AudioClip.Create("engine", n, 1, Rate, false);
         clip.SetData(data, 0);
         return clip;
     }

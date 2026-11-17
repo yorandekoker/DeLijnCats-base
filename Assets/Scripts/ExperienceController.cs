@@ -61,6 +61,7 @@ public partial class ExperienceController : MonoBehaviour
 
     partial void InitAudio();
     partial void PlaySfx(string sfxName);
+    partial void TickAudio();
 
     void Start()
     {
@@ -94,6 +95,7 @@ public partial class ExperienceController : MonoBehaviour
             HandleTap(p);
         }
         PulseRings();
+        TickAudio();
 
         switch (state)
         {
