@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Audio;
 
 /// <summary>
 /// Menu: Tools > De Lijn > Build Scene
@@ -95,6 +96,14 @@ public static class BuildDeLijnScene
         exp.driverSeat = driverSeat;
         exp.seats = seats;
         exp.passengers = passengers;
+        var mixer = BuildMixer();
+        if (mixer != null)
+        {
+            exp.ambientGroup = FindGroup(mixer, "Ambient");
+            exp.musicGroup = FindGroup(mixer, "Music");
+            exp.sfxGroup = FindGroup(mixer, "SFX");
+            exp.uiGroup = FindGroup(mixer, "UI");
+        }
 
         // ---- Save ----
         const string scenePath = "Assets/Scenes/Museum.unity";
@@ -109,6 +118,42 @@ public static class BuildDeLijnScene
             Debug.LogWarning("De Lijn: Cinemachine is not installed. Open Window > Package Manager, install 'Cinemachine', then run Tools > De Lijn > Build Scene again.");
         else
             Debug.Log("De Lijn: scene built and saved to " + scenePath + ". Press Play.");
+    }
+
+    static AudioMixerGroup FindGroup(AudioMixer m, string n)
+    {
+        var g = m.FindMatchingGroups(n);
+        return (g != null && g.Length > 0) ? g[0] : null;
+    }
+
+    // Creates Assets/Audio/MainMixer.mixer with Ambient, Music, SFX and UI groups under Master (once).
+    static AudioMixer BuildMixer()
+    {
+        const string path = "Assets/Audio/MainMixer.mixer";
+        EnsureFolder("Assets/Audio");
+        var existing = AssetDatabase.LoadAssetAtPath<AudioMixer>(path);
+        if (existing != null) return existing;
+        try
+        {
+            var ctrlType = FindType("UnityEditor.Audio.AudioMixerController");
+            var create = ctrlType.GetMethod("CreateMixerControllerAtPath", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var ctrl = create.Invoke(null, new object[] { path });
+            var master = ctrlType.GetProperty("masterGroup", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(ctrl, null);
+            var newGroup = ctrlType.GetMethod("CreateNewGroup", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var addChild = ctrlType.GetMethod("AddChildToParent", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            foreach (var n in new[] { "Ambient", "Music", "SFX", "UI" })
+            {
+                var g = newGroup.Invoke(ctrl, new object[] { n, true });
+                addChild.Invoke(ctrl, new object[] { g, master });
+            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(path);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("De Lijn: could not create the Audio Mixer automatically (" + e.Message + "). Create one via Assets > Create > Audio > Audio Mixer with groups Ambient, Music, SFX, UI.");
+        }
+        return AssetDatabase.LoadAssetAtPath<AudioMixer>(path);
     }
 
     static float StopX(int i) { return 24f + i * 22f; }
